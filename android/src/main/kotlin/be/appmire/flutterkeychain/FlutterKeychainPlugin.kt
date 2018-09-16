@@ -107,9 +107,28 @@ class RsaKeyStoreKeyWrapper(context: Context) : KeyWrapper{
     val ks = KeyStore.getInstance(KEYSTORE_PROVIDER_ANDROID)
     ks.load(null)
 
-    val entry = ks.getEntry(keyAlias, null)
+    // Added hacks for getting KeyEntry:
+    // https://stackoverflow.com/questions/36652675/java-security-unrecoverablekeyexception-failed-to-obtain-information-about-priv
+    // https://stackoverflow.com/questions/36488219/android-security-keystoreexception-invalid-key-blob
+    var entry : KeyStore.Entry? = null
+    for ( i in 1..5) {
+      try {
+        entry = ks.getEntry(keyAlias, null);
+        break;
+      } catch ( ignored: Exception) {
+      }
+    }
+
     if (entry == null) {
-      createKeys()
+        createKeys();
+        try {
+            entry = ks.getEntry(keyAlias, null);
+        } catch (ignored: Exception) {
+            ks.deleteEntry(keyAlias);
+        }
+        if (entry == null) {
+            createKeys();
+        }
     }
   }
 
@@ -138,7 +157,7 @@ class RsaKeyStoreKeyWrapper(context: Context) : KeyWrapper{
               .setCertificateSubject(X500Principal("CN=$keyAlias"))
               .setDigests(KeyProperties.DIGEST_SHA256)
               .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_RSA_PKCS1)
-              .setUserAuthenticationRequired(true)
+              .setUserAuthenticationRequired(false)
               .setCertificateSerialNumber(BigInteger.valueOf(1))
               .setCertificateNotBefore(start.time)
               .setCertificateNotAfter(end.time)

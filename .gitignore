@@ -2,6 +2,7 @@
 .dart_tool/
 .idea/
 android/.idea
+example/.idea
 
 .packages
 .pub/
