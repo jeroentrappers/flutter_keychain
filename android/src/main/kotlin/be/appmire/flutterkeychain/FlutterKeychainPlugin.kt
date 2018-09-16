@@ -296,26 +296,31 @@ class FlutterKeychainPlugin : MethodCallHandler {
     }
 
     override fun onMethodCall(call: MethodCall, result: Result): Unit {
-        when (call.method) {
-            "get" -> {
-                val encryptedValue: String? = preferences.getString(call.key(), null)
-                val value = encryptor.decrypt(encryptedValue)
-                result.success(value)
+        try {
+            when (call.method) {
+                "get" -> {
+                    val encryptedValue: String? = preferences.getString(call.key(), null)
+                    val value = encryptor.decrypt(encryptedValue)
+                    result.success(value)
+                }
+                "put" -> {
+                    val value = encryptor.encrypt(call.value())
+                    preferences.edit().putString(call.key(), value).commit()
+                    result.success(null)
+                }
+                "remove" -> {
+                    preferences.edit().remove(call.key());
+                    result.success(null);
+                }
+                "clear" -> {
+                    preferences.edit().clear();
+                    result.success(null);
+                }
+                else -> result.notImplemented()
             }
-            "put" -> {
-                val value = encryptor.encrypt(call.value())
-                preferences.edit().putString(call.key(), value).commit()
-                result.success(null)
-            }
-            "remove" -> {
-                preferences.edit().remove(call.key());
-                result.success(null);
-            }
-            "clear" -> {
-                preferences.edit().clear();
-                result.success(null);
-            }
-            else -> result.notImplemented()
+        } catch (e: Exception) {
+            Log.e("flutter_keychain", e.message)
+            result.error("flutter_keychain", e.message, e)
         }
     }
 }
