@@ -107,9 +107,28 @@ class RsaKeyStoreKeyWrapper(context: Context) : KeyWrapper {
         val ks = KeyStore.getInstance(KEYSTORE_PROVIDER_ANDROID)
         ks.load(null)
 
-        val entry = ks.getEntry(keyAlias, null)
+        // Added hacks for getting KeyEntry:
+        // https://stackoverflow.com/questions/36652675/java-security-unrecoverablekeyexception-failed-to-obtain-information-about-priv
+        // https://stackoverflow.com/questions/36488219/android-security-keystoreexception-invalid-key-blob
+        var entry: KeyStore.Entry? = null
+        for (i in 1..5) {
+            try {
+                entry = ks.getEntry(keyAlias, null);
+                break;
+            } catch (ignored: Exception) {
+            }
+        }
+
         if (entry == null) {
-            createKeys()
+            createKeys();
+            try {
+                entry = ks.getEntry(keyAlias, null);
+            } catch (ignored: Exception) {
+                ks.deleteEntry(keyAlias);
+            }
+            if (entry == null) {
+                createKeys();
+            }
         }
     }
 
@@ -138,7 +157,7 @@ class RsaKeyStoreKeyWrapper(context: Context) : KeyWrapper {
                 .setCertificateSubject(X500Principal("CN=$keyAlias"))
                 .setDigests(KeyProperties.DIGEST_SHA256)
                 .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_RSA_PKCS1)
-                .setUserAuthenticationRequired(true)
+                .setUserAuthenticationRequired(false)
                 .setCertificateSerialNumber(BigInteger.valueOf(1))
                 .setCertificateNotBefore(start.time)
                 .setCertificateNotAfter(end.time)
@@ -168,26 +187,34 @@ class AesStringEncryptor// get the key, which is encrypted by RSA cipher.
     private val charset: Charset = Charset.forName("UTF-8")
     private val secureRandom: SecureRandom = SecureRandom()
 
-    private val secretKey: Key
+    private var secretKey: Key
     private val cipher: Cipher
 
     init {
         val wrappedAesKey = preferences.getString(WRAPPED_AES_KEY_ITEM, null)
-        val key: ByteArray
-        if (wrappedAesKey == null) {
-            key = ByteArray(keySize)
-            secureRandom.nextBytes(key)
-            secretKey = SecretKeySpec(key, KEY_ALGORITHM)
-            preferences
-                    .edit()
-                    .putString(WRAPPED_AES_KEY_ITEM, Base64.encodeToString(keyWrapper.wrap(secretKey), Base64.DEFAULT))
-                    .commit()
 
+        if (wrappedAesKey == null) {
+            secretKey = createKey(preferences, keyWrapper)
         } else {
             val encrypted = Base64.decode(wrappedAesKey, Base64.DEFAULT)
-            secretKey = keyWrapper.unwrap(encrypted, KEY_ALGORITHM)
+            try {
+                secretKey = keyWrapper.unwrap(encrypted, KEY_ALGORITHM)
+            } catch (ingnored: Exception) {
+                secretKey = createKey(preferences, keyWrapper)
+            }
         }
         cipher = Cipher.getInstance("AES/CBC/PKCS7Padding")
+    }
+
+    fun createKey(preferences: SharedPreferences, keyWrapper: KeyWrapper): Key {
+        val key = ByteArray(keySize)
+        secureRandom.nextBytes(key)
+        val secretKey = SecretKeySpec(key, KEY_ALGORITHM)
+        preferences
+                .edit()
+                .putString(WRAPPED_AES_KEY_ITEM, Base64.encodeToString(keyWrapper.wrap(secretKey), Base64.DEFAULT))
+                .commit()
+        return secretKey
     }
 
     // input: UTF-8 cleartext string
@@ -269,26 +296,31 @@ class FlutterKeychainPlugin : MethodCallHandler {
     }
 
     override fun onMethodCall(call: MethodCall, result: Result): Unit {
-        when (call.method) {
-            "get" -> {
-                val encryptedValue: String? = preferences.getString(call.key(), null)
-                val value = encryptor.decrypt(encryptedValue)
-                result.success(value)
+        try {
+            when (call.method) {
+                "get" -> {
+                    val encryptedValue: String? = preferences.getString(call.key(), null)
+                    val value = encryptor.decrypt(encryptedValue)
+                    result.success(value)
+                }
+                "put" -> {
+                    val value = encryptor.encrypt(call.value())
+                    preferences.edit().putString(call.key(), value).commit()
+                    result.success(null)
+                }
+                "remove" -> {
+                    preferences.edit().remove(call.key()).commit()
+                    result.success(null)
+                }
+                "clear" -> {
+                    preferences.edit().clear().commit()
+                    result.success(null)
+                }
+                else -> result.notImplemented()
             }
-            "put" -> {
-                val value = encryptor.encrypt(call.value())
-                preferences.edit().putString(call.key(), value).commit()
-                result.success(null)
-            }
-            "remove" -> {
-                preferences.edit().remove(call.key()).commit()
-                result.success(null)
-            }
-            "clear" -> {
-                preferences.edit().clear().commit()
-                result.success(null)
-            }
-            else -> result.notImplemented()
+        } catch (e: Exception) {
+            Log.e("flutter_keychain", e.message)
+            result.error("flutter_keychain", e.message, e)
         }
     }
 }
