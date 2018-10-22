@@ -14,3 +14,7 @@
 
 * Added commit to delete and clear for android.
 * Updated xcode example project, because of duplicate framework (new version of flutter)
+
+## 0.0.7
+
+* Bump kotlin version to 1.2.51
