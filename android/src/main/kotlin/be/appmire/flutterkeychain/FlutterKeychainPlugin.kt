@@ -287,7 +287,7 @@ class FlutterKeychainPlugin : MethodCallHandler {
         }
     }
 
-    fun MethodCall.key(): String {
+    fun MethodCall.key(): String? {
         return this.argument("key")
     }
 

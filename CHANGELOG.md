@@ -18,3 +18,8 @@
 ## 0.0.7
 
 * Bump kotlin version to 1.2.51
+
+## 0.0.8
+
+* Fix small issue with Kotlin String? type
+
