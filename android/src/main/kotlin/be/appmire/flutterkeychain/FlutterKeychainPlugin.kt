@@ -143,16 +143,16 @@ class RsaKeyStoreKeyWrapper(context: Context) : KeyWrapper {
 
         val spec: AlgorithmParameterSpec
 
-//    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-//
-//      spec = android.security.KeyPairGeneratorSpec.Builder( context)
-//              .setAlias(keyAlias)
-//              .setSubject(X500Principal("CN=$keyAlias"))
-//              .setSerialNumber(BigInteger.valueOf(1))
-//              .setStartDate(start.time)
-//              .setEndDate(end.time)
-//              .build()
-//    } else {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+
+      spec = android.security.KeyPairGeneratorSpec.Builder( context)
+              .setAlias(keyAlias)
+              .setSubject(X500Principal("CN=$keyAlias"))
+              .setSerialNumber(BigInteger.valueOf(1))
+              .setStartDate(start.time)
+              .setEndDate(end.time)
+              .build()
+    } else {
         spec = KeyGenParameterSpec.Builder(keyAlias, KeyProperties.PURPOSE_DECRYPT or KeyProperties.PURPOSE_ENCRYPT)
                 .setCertificateSubject(X500Principal("CN=$keyAlias"))
                 .setDigests(KeyProperties.DIGEST_SHA256)
@@ -162,7 +162,7 @@ class RsaKeyStoreKeyWrapper(context: Context) : KeyWrapper {
                 .setCertificateNotBefore(start.time)
                 .setCertificateNotAfter(end.time)
                 .build()
-//    }
+    }
         kpGenerator.initialize(spec)
         kpGenerator.generateKeyPair()
     }
