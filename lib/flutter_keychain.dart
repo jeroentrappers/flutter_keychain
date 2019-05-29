@@ -16,10 +16,6 @@ class FlutterKeychain {
   static Future<String> get({@required String key}) async =>
       await _channel.invokeMethod('get', {'key': key});
 
-  // keys - get all keys
-  static Future<List<String>> keys() async =>
-      await _channel.invokeMethod('keys');
-
   // remove - remove entry for a given key
   static Future<void> remove({@required String key}) async =>
       await _channel.invokeMethod('remove', {'key': key});
