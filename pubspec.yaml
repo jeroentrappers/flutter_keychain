@@ -1,6 +1,6 @@
 name: flutter_keychain
 description: Flutter secure storage via Keychain and Keystore
-version: 1.0.0
+version: 1.0.1
 author: Jeroen Trappers <jeroen@appmire.be>
 homepage: https://github.com/jeroentrappers/flutter_keychain
 
