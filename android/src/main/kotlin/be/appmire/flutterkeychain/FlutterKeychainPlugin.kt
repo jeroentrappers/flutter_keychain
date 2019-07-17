@@ -190,7 +190,6 @@ class AesStringEncryptor// get the key, which is encrypted by RSA cipher.
     private val cipher: Cipher
 
     init {
-        Log.d("TEST", "TESTESTESSTESTe")
         val wrappedAesKey = preferences.getString(WRAPPED_AES_KEY_ITEM, null)
 
         if (wrappedAesKey == null) {
