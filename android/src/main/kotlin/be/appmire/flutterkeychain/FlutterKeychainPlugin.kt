@@ -99,7 +99,6 @@ class RsaKeyStoreKeyWrapper(context: Context) : KeyWrapper {
 
     @Throws(Exception::class)
     private fun createRSAKeysIfNeeded() {
-        Log.d("TEST", "This is a test")
         val ks = KeyStore.getInstance(KEYSTORE_PROVIDER_ANDROID)
         ks.load(null)
 
