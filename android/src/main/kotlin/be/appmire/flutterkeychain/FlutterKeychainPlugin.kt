@@ -15,10 +15,7 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.PluginRegistry.Registrar
 import java.math.BigInteger
 import java.nio.charset.Charset
-import java.security.Key
-import java.security.KeyPairGenerator
-import java.security.KeyStore
-import java.security.SecureRandom
+import java.security.*
 import java.security.spec.AlgorithmParameterSpec
 import java.util.*
 import javax.crypto.Cipher
@@ -29,10 +26,10 @@ import javax.security.auth.x500.X500Principal
 
 interface KeyWrapper {
     @Throws(Exception::class)
-    fun wrap(key: Key): ByteArray;
+    fun wrap(key: Key): ByteArray
 
     @Throws(Exception::class)
-    fun unwrap(wrappedKey: ByteArray, algorithm: String): Key;
+    fun unwrap(wrappedKey: ByteArray, algorithm: String): Key
 }
 
 class RsaKeyStoreKeyWrapper(context: Context) : KeyWrapper {
@@ -50,7 +47,7 @@ class RsaKeyStoreKeyWrapper(context: Context) : KeyWrapper {
 
     @Throws(Exception::class)
     override fun wrap(key: Key): ByteArray {
-        val publicKey = getEntry().certificate.publicKey
+        val publicKey = getKeyStore().getCertificate(keyAlias)?.publicKey
         val cipher = getRSACipher()
         cipher.init(Cipher.WRAP_MODE, publicKey)
         return cipher.wrap(key)
@@ -58,7 +55,7 @@ class RsaKeyStoreKeyWrapper(context: Context) : KeyWrapper {
 
     @Throws(Exception::class)
     override fun unwrap(wrappedKey: ByteArray, algorithm: String): Key {
-        val privateKey = getEntry().privateKey
+        val privateKey = getKeyStore().getKey(keyAlias, null)
         val cipher = getRSACipher()
         cipher.init(Cipher.UNWRAP_MODE, privateKey)
 
@@ -67,7 +64,7 @@ class RsaKeyStoreKeyWrapper(context: Context) : KeyWrapper {
 
     @Throws(Exception::class)
     fun encrypt(input: ByteArray): ByteArray {
-        val publicKey = getEntry().certificate.publicKey
+        val publicKey = getKeyStore().getCertificate(keyAlias).publicKey
         val cipher = getRSACipher()
         cipher.init(Cipher.ENCRYPT_MODE, publicKey)
 
@@ -76,7 +73,7 @@ class RsaKeyStoreKeyWrapper(context: Context) : KeyWrapper {
 
     @Throws(Exception::class)
     fun decrypt(input: ByteArray): ByteArray {
-        val privateKey = getEntry().privateKey
+        val privateKey = getKeyStore().getKey(keyAlias, null)
         val cipher = getRSACipher()
         cipher.init(Cipher.DECRYPT_MODE, privateKey)
 
@@ -84,13 +81,11 @@ class RsaKeyStoreKeyWrapper(context: Context) : KeyWrapper {
     }
 
     @Throws(Exception::class)
-    private fun getEntry(): KeyStore.PrivateKeyEntry {
+    private fun getKeyStore(): KeyStore {
         val ks = KeyStore.getInstance(KEYSTORE_PROVIDER_ANDROID)
         ks.load(null)
 
-        return (ks.getEntry(keyAlias, null)
-                ?: throw Exception("No key found under alias: $keyAlias")) as? KeyStore.PrivateKeyEntry
-                ?: throw Exception("Not an instance of a PrivateKeyEntry")
+        return ks
     }
 
     @Throws(Exception::class)
@@ -110,24 +105,27 @@ class RsaKeyStoreKeyWrapper(context: Context) : KeyWrapper {
         // Added hacks for getting KeyEntry:
         // https://stackoverflow.com/questions/36652675/java-security-unrecoverablekeyexception-failed-to-obtain-information-about-priv
         // https://stackoverflow.com/questions/36488219/android-security-keystoreexception-invalid-key-blob
-        var entry: KeyStore.Entry? = null
+        var privateKey: PrivateKey? = null
+        var publicKey: PublicKey? = null
         for (i in 1..5) {
             try {
-                entry = ks.getEntry(keyAlias, null);
-                break;
+                privateKey = ks.getKey(keyAlias, null) as PrivateKey
+                publicKey = ks.getCertificate(keyAlias).publicKey
+                break
             } catch (ignored: Exception) {
             }
         }
 
-        if (entry == null) {
-            createKeys();
+        if (privateKey == null || publicKey == null) {
+            createKeys()
             try {
-                entry = ks.getEntry(keyAlias, null);
+                privateKey = ks.getKey(keyAlias, null) as PrivateKey
+                publicKey = ks.getCertificate(keyAlias).publicKey
             } catch (ignored: Exception) {
-                ks.deleteEntry(keyAlias);
+                ks.deleteEntry(keyAlias)
             }
-            if (entry == null) {
-                createKeys();
+            if (privateKey == null || publicKey == null) {
+                createKeys()
             }
         }
     }
@@ -250,7 +248,7 @@ class AesStringEncryptor// get the key, which is encrypted by RSA cipher.
             return null
         }
 
-        val inputBytes = Base64.decode(input, 0);
+        val inputBytes = Base64.decode(input, 0)
 
         val iv = ByteArray(ivSize)
         System.arraycopy(inputBytes, 0, iv, 0, iv.size)
@@ -269,15 +267,15 @@ class AesStringEncryptor// get the key, which is encrypted by RSA cipher.
 class FlutterKeychainPlugin : MethodCallHandler {
 
     companion object {
-        lateinit private var encryptor: StringEncryptor;
-        lateinit private var preferences: SharedPreferences;
+        lateinit private var encryptor: StringEncryptor
+        lateinit private var preferences: SharedPreferences
 
         @JvmStatic
         fun registerWith(registrar: Registrar): Unit {
 
             try {
-                preferences = registrar.context().getSharedPreferences("FlutterKeychain", Context.MODE_PRIVATE);
-                encryptor = AesStringEncryptor(preferences = preferences, keyWrapper = RsaKeyStoreKeyWrapper(registrar.context()));
+                preferences = registrar.context().getSharedPreferences("FlutterKeychain", Context.MODE_PRIVATE)
+                encryptor = AesStringEncryptor(preferences = preferences, keyWrapper = RsaKeyStoreKeyWrapper(registrar.context()))
 
                 val channel = MethodChannel(registrar.messenger(), "plugin.appmire.be/flutter_keychain")
                 channel.setMethodCallHandler(FlutterKeychainPlugin())
