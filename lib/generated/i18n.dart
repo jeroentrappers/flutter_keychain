@@ -15,7 +15,7 @@ class S implements WidgetsLocalizations {
   static const GeneratedLocalizationsDelegate delegate =
       const GeneratedLocalizationsDelegate();
 
-  static S of(BuildContext context) =>
+  static S? of(BuildContext context) =>
       Localizations.of<S>(context, WidgetsLocalizations);
 
   @override
@@ -39,9 +39,9 @@ class GeneratedLocalizationsDelegate extends LocalizationsDelegate<WidgetsLocali
     ];
   }
 
-  LocaleResolutionCallback resolution({Locale fallback}) {
-    return (Locale locale, Iterable<Locale> supported) {
-      final Locale languageLocale = new Locale(locale.languageCode, "");
+  LocaleResolutionCallback resolution({Locale? fallback}) {
+    return (Locale? locale, Iterable<Locale> supported) {
+      final Locale languageLocale = new Locale(locale?.languageCode ?? "en", "");
       if (supported.contains(locale))
         return locale;
       else if (supported.contains(languageLocale))
@@ -73,6 +73,6 @@ class GeneratedLocalizationsDelegate extends LocalizationsDelegate<WidgetsLocali
   bool shouldReload(GeneratedLocalizationsDelegate old) => false;
 }
 
-String getLang(Locale l) => l.countryCode != null && l.countryCode.isEmpty
+String getLang(Locale l) => l.countryCode != null && l.countryCode!.isEmpty
     ? l.languageCode
     : l.toString();
