@@ -1,6 +1,7 @@
 ## 2.0.0
 * Migrate to null-safety
 * Minimum Dart SDK 2.12.0
+thanks https://github.com/wbusey0 for the PR.
 
 ## 1.0.1
 * Removed `keys()`
