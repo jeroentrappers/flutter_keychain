@@ -1,3 +1,7 @@
+## 2.0.1
+* fix Nullability issue in the Kotlin code
+thanks https://github.com/wbusey0 for the PR.
+
 ## 2.0.0
 * Migrate to null-safety
 * Minimum Dart SDK 2.12.0
