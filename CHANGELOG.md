@@ -1,3 +1,7 @@
+## 2.1.0
+* Android embedding 
+thanks https://github.com/StanleyCocos for the PR!
+
 ## 2.0.1
 * fix Nullability issue in the Kotlin code
 thanks https://github.com/wbusey0 for the PR.
