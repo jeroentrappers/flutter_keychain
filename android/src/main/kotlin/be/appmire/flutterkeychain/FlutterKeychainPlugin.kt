@@ -267,6 +267,7 @@ class AesStringEncryptor// get the key, which is encrypted by RSA cipher.
 
 class FlutterKeychainPlugin : FlutterPlugin, MethodCallHandler {
     private var channel: MethodChannel? = null
+    private val WRAPPED_AES_KEY_ITEM = "W0n5hlJtrAH0K8mIreDGxtG"
 
     companion object {
         private const val channelName = "plugin.appmire.be/flutter_keychain"
@@ -329,8 +330,10 @@ class FlutterKeychainPlugin : FlutterPlugin, MethodCallHandler {
                     result.success(null)
                 }
                 "clear" -> {
-                    preferences.edit().clear().commit()
-                    result.success(null)
+                     val savedValue: String? = preferences.getString(WRAPPED_AES_KEY_ITEM, null)
+                     preferences.edit().clear().commit()
+                     preferences.edit().putString(WRAPPED_AES_KEY_ITEM, savedValue).commit()
+                     result.success(null)
                 }
                 else -> result.notImplemented()
             }
