@@ -330,10 +330,10 @@ class FlutterKeychainPlugin : FlutterPlugin, MethodCallHandler {
                     result.success(null)
                 }
                 "clear" -> {
-                     val savedValue: String? = preferences.getString(WRAPPED_AES_KEY_ITEM, null)
-                     preferences.edit().clear().commit()
-                     preferences.edit().putString(WRAPPED_AES_KEY_ITEM, savedValue).commit()
-                     result.success(null)
+                    val savedValue: String? = preferences.getString(WRAPPED_AES_KEY_ITEM, null)
+                    preferences.edit().clear().commit()
+                    preferences.edit().putString(WRAPPED_AES_KEY_ITEM, savedValue).commit()
+                    result.success(null)
                 }
                 else -> result.notImplemented()
             }
