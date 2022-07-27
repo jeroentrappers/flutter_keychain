@@ -1,17 +1,23 @@
+## 2.2.0
+
+* Update android deps
+* Clean up
+
 ## 2.1.0
-* Android embedding 
-thanks https://github.com/StanleyCocos for the PR!
+
+* Android embedding thanks https://github.com/StanleyCocos for the PR!
 
 ## 2.0.1
-* fix Nullability issue in the Kotlin code
-thanks https://github.com/wbusey0 for the PR.
+
+* fix Nullability issue in the Kotlin code thanks https://github.com/wbusey0 for the PR.
 
 ## 2.0.0
+
 * Migrate to null-safety
-* Minimum Dart SDK 2.12.0
-thanks https://github.com/wbusey0 for the PR.
+* Minimum Dart SDK 2.12.0 thanks https://github.com/wbusey0 for the PR.
 
 ## 1.0.1
+
 * Removed `keys()`
 
 ## 1.0.0
