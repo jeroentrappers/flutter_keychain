@@ -6,9 +6,8 @@ class FlutterKeychain {
   static const MethodChannel _channel =
       const MethodChannel('plugin.appmire.be/flutter_keychain');
 
-  // put - store the value for a key.
-  static Future<void> put(
-          {required String key, required String value}) async =>
+  // put - store the value for a key
+  static Future<void> put({required String key, required String value}) async =>
       _channel.invokeMethod('put', {'key': key, 'value': value});
 
   // get - get the value for a given key

@@ -24,7 +24,6 @@ import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 import javax.security.auth.x500.X500Principal
 
-
 interface KeyWrapper {
     @Throws(Exception::class)
     fun wrap(key: Key): ByteArray
@@ -92,9 +91,15 @@ class RsaKeyStoreKeyWrapper(context: Context) : KeyWrapper {
     @Throws(Exception::class)
     private fun getRSACipher(): Cipher {
         return if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            Cipher.getInstance("RSA/ECB/PKCS1Padding", "AndroidOpenSSL") // error in android 6: InvalidKeyException: Need RSA private or public key
+            Cipher.getInstance(
+                "RSA/ECB/PKCS1Padding",
+                "AndroidOpenSSL"
+            ) // error in android 6: InvalidKeyException: Need RSA private or public key
         } else {
-            Cipher.getInstance("RSA/ECB/PKCS1Padding", "AndroidKeyStoreBCWorkaround") // error in android 5: NoSuchProviderException: Provider not available: AndroidKeyStoreBCWorkaround
+            Cipher.getInstance(
+                "RSA/ECB/PKCS1Padding",
+                "AndroidKeyStoreBCWorkaround"
+            ) // error in android 5: NoSuchProviderException: Provider not available: AndroidKeyStoreBCWorkaround
         }
     }
 
@@ -142,17 +147,20 @@ class RsaKeyStoreKeyWrapper(context: Context) : KeyWrapper {
 
         val spec: AlgorithmParameterSpec
 
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
 
-      spec = android.security.KeyPairGeneratorSpec.Builder( context)
-              .setAlias(keyAlias)
-              .setSubject(X500Principal("CN=$keyAlias"))
-              .setSerialNumber(BigInteger.valueOf(1))
-              .setStartDate(start.time)
-              .setEndDate(end.time)
-              .build()
-    } else {
-        spec = KeyGenParameterSpec.Builder(keyAlias, KeyProperties.PURPOSE_DECRYPT or KeyProperties.PURPOSE_ENCRYPT)
+            spec = android.security.KeyPairGeneratorSpec.Builder(context)
+                .setAlias(keyAlias)
+                .setSubject(X500Principal("CN=$keyAlias"))
+                .setSerialNumber(BigInteger.valueOf(1))
+                .setStartDate(start.time)
+                .setEndDate(end.time)
+                .build()
+        } else {
+            spec = KeyGenParameterSpec.Builder(
+                keyAlias,
+                KeyProperties.PURPOSE_DECRYPT or KeyProperties.PURPOSE_ENCRYPT
+            )
                 .setCertificateSubject(X500Principal("CN=$keyAlias"))
                 .setDigests(KeyProperties.DIGEST_SHA256)
                 .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_RSA_PKCS1)
@@ -161,7 +169,7 @@ class RsaKeyStoreKeyWrapper(context: Context) : KeyWrapper {
                 .setCertificateNotBefore(start.time)
                 .setCertificateNotAfter(end.time)
                 .build()
-    }
+        }
         kpGenerator.initialize(spec)
         kpGenerator.generateKeyPair()
     }
@@ -177,7 +185,8 @@ interface StringEncryptor {
 }
 
 class AesStringEncryptor// get the key, which is encrypted by RSA cipher.
-@Throws(Exception::class) constructor(preferences: SharedPreferences, keyWrapper: KeyWrapper) : StringEncryptor {
+@Throws(Exception::class) constructor(preferences: SharedPreferences, keyWrapper: KeyWrapper) :
+    StringEncryptor {
 
     private val ivSize = 16
     private val keySize = 16
@@ -210,9 +219,12 @@ class AesStringEncryptor// get the key, which is encrypted by RSA cipher.
         secureRandom.nextBytes(key)
         val secretKey = SecretKeySpec(key, KEY_ALGORITHM)
         preferences
-                .edit()
-                .putString(WRAPPED_AES_KEY_ITEM, Base64.encodeToString(keyWrapper.wrap(secretKey), Base64.DEFAULT))
-                .commit()
+            .edit()
+            .putString(
+                WRAPPED_AES_KEY_ITEM,
+                Base64.encodeToString(keyWrapper.wrap(secretKey), Base64.DEFAULT)
+            )
+            .commit()
         return secretKey
     }
 
@@ -267,6 +279,7 @@ class AesStringEncryptor// get the key, which is encrypted by RSA cipher.
 
 class FlutterKeychainPlugin : FlutterPlugin, MethodCallHandler {
     private var channel: MethodChannel? = null
+    private val WRAPPED_AES_KEY_ITEM = "W0n5hlJtrAH0K8mIreDGxtG"
 
     companion object {
         private const val channelName = "plugin.appmire.be/flutter_keychain"
@@ -278,8 +291,12 @@ class FlutterKeychainPlugin : FlutterPlugin, MethodCallHandler {
         fun registerWith(registrar: Registrar) {
 
             try {
-                preferences = registrar.context().getSharedPreferences("FlutterKeychain", Context.MODE_PRIVATE)
-                encryptor = AesStringEncryptor(preferences = preferences, keyWrapper = RsaKeyStoreKeyWrapper(registrar.context()))
+                preferences = registrar.context()
+                    .getSharedPreferences("FlutterKeychain", Context.MODE_PRIVATE)
+                encryptor = AesStringEncryptor(
+                    preferences = preferences,
+                    keyWrapper = RsaKeyStoreKeyWrapper(registrar.context())
+                )
 
                 val instance = FlutterKeychainPlugin()
                 instance.channel = MethodChannel(registrar.messenger(), channelName)
@@ -291,8 +308,12 @@ class FlutterKeychainPlugin : FlutterPlugin, MethodCallHandler {
     }
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-        preferences = binding.applicationContext.getSharedPreferences("FlutterKeychain", Context.MODE_PRIVATE)
-        encryptor = AesStringEncryptor(preferences = preferences, keyWrapper = RsaKeyStoreKeyWrapper(binding.applicationContext))
+        preferences =
+            binding.applicationContext.getSharedPreferences("FlutterKeychain", Context.MODE_PRIVATE)
+        encryptor = AesStringEncryptor(
+            preferences = preferences,
+            keyWrapper = RsaKeyStoreKeyWrapper(binding.applicationContext)
+        )
 
         channel = MethodChannel(binding.binaryMessenger, channelName)
         channel!!.setMethodCallHandler(this)
@@ -329,7 +350,9 @@ class FlutterKeychainPlugin : FlutterPlugin, MethodCallHandler {
                     result.success(null)
                 }
                 "clear" -> {
+                    val savedValue: String? = preferences.getString(WRAPPED_AES_KEY_ITEM, null)
                     preferences.edit().clear().commit()
+                    preferences.edit().putString(WRAPPED_AES_KEY_ITEM, savedValue).commit()
                     result.success(null)
                 }
                 else -> result.notImplemented()
