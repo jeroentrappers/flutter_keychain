@@ -1,3 +1,8 @@
+## 2.2.1
+
+* Update android deps
+* Clean up
+
 ## 2.2.0
 
 * Update android deps
