@@ -2,7 +2,7 @@ name: crypt_local_data
 description: Crypted Encrypted Local Data
 version: 0.1.0
 author: Sigma Software
-homepage:
+homepage: https://github.com/Sigma-Softwares/crypt_local_data
 
 environment:
   sdk: ">=2.16.1 <3.0.0"
