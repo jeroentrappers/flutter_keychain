@@ -1,48 +1,71 @@
-# flutter_keychain
+<!-- 
+This README describes the package. If you publish this package to pub.dev,
+this README's contents appear on the landing page for your package.
 
-A Flutter plugin for supporting secure storage of strings via Keychain and Keystore
+For information about how to write a good package README, see the guide for
+[writing package pages](https://dart.dev/guides/libraries/writing-package-pages). 
 
-If you have other types you want to store, you need to serialize to and from UTF-8 strings.
+For general information about developing packages, see the Dart guide for
+[creating packages](https://dart.dev/guides/libraries/create-library-packages)
+and the Flutter guide for
+[developing packages and plugins](https://flutter.dev/developing-packages). 
+-->
 
-* [Keychain](https://developer.apple.com/library/content/documentation/Security/Conceptual/keychainServConcepts/01introduction/introduction.html#//apple_ref/doc/uid/TP30000897-CH203-TP1) is used for iOS
-* AES encryption is used for Android. AES secret key is encrypted with RSA and RSA key is stored in [KeyStore](https://developer.android.com/training/articles/keystore.html)
+TODO: Put a short description of the package here that helps potential users
+know whether this package might be useful for them.
 
-*Note* KeyStore was introduced in Android 4.3 (API level 18). The plugin does not work on earlier versions.
+## crypt_local_data
+
+Package that allows us to save data in local storage in an encrypted way.
+
+We use AES methodology for encryption. For this, we get help from the Encrypt package. For AES methodology, two passwords with 32 characters for Key and 16 characters for IV are required. 
+I use the commands "openssl rand -base64 12" and "openssl rand -base64 24" to set these passwords.
+We create an .env file with the passwords we have determined; We place it inside by using the "privateKey" key for the 32-character password, and using the "privateINV" key for the 16-character one.
+Using the Flutter dotenv package, we can access the passwords in our .env file.
+With the Shared preferences package, we can save the data we encrypted to local storage.
+
+SharedPreferences, Encrypt and Flutter Keychain packages were used in the package. It was created by forking from the Flutter Keychain package. On the iOS side, the Flutter Keychain package is used entirely.
+
+## Getting started
+
+To use the package, we need to add an .env file to the project directory. For AES methodology, two passwords with 32 characters for Key and 16 characters for IV are required.
+
+https://imgur.com/2gfibnq
+
+For the 32 character Key password, paste the code below into the terminal and run it.
+
+```terminal
+openssl rand -base64 24
+```
+
+For the 16 character Key password, paste the code below into the terminal and run it.
+
+```terminal
+openssl rand -base64 12
+```
+
+We place it inside by using the "privateKey" key for the 32-character password, and using the "privateINV" key for the 16-character one as seen in the picture.
+
+## Usage
 
 
-## Getting Started
 ```dart
 
-import 'package:flutter_keychain/flutter_keychain.dart';
+import 'package:crypt_local_data/crypt_local_data.dart';
 ...
 
+// initialize package
+await CryptLocalData().initialize();
+
 // Get value
-var value = await FlutterKeychain.get(key: "key");
+String value = await CryptLocalData().getEncryptedString(dataKey: "newData");
 
-// Put value
-await FlutterKeychain.put(key: "key", value: "value");
+// Set value
+await CryptLocalData().setCryptedString(dataKey: "newData", dataValue: value);
 
-// Remove item
-await FlutterKeyChain.remove(key: "key");
+// Delete data
+await CryptLocalData().deleteData(dataKey: "newData");
 
-// Clear the secure store
-await FlutterKeyChain.clear();
-
+// Delete all data
+await CryptLocalData().deleteAllData();
 ```
-
-### Configure Android version
-In `[project]/android/app/build.gradle` set `minSdkVersion` to >= 18.
-```
-android {
-    ...
-    defaultConfig {
-        ...
-        minSdkVersion 18
-        ...
-    }
-}
-```
-
-## Contributing
-
-For help on editing plugin code, view the [documentation](https://flutter.io/developing-packages/#edit-plugin-package).
