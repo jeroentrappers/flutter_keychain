@@ -1,7 +1,7 @@
-#import "FlutterKeychainPlugin.h"
+#import "FlutterKeychainPluginCrypt.h"
 
-static NSString *const KEYCHAIN_SERVICE = @"flutter_keychain";
-static NSString *const CHANNEL_NAME = @"plugin.appmire.be/flutter_keychain";
+static NSString *const KEYCHAIN_SERVICE = @"flutter_keychain_crypt";
+static NSString *const CHANNEL_NAME = @"plugin.appmire.be/flutter_keychain/crypt";
 
 static NSString *const InvalidParameters = @"Invalid parameter's type";
 
@@ -24,13 +24,13 @@ static NSString *const InvalidParameters = @"Invalid parameter's type";
 
 @end
 
-@interface FlutterKeychainPlugin()
+@interface FlutterKeychainPluginCrypt()
 
 @property (strong, nonatomic) NSDictionary *query;
 
 @end
 
-@implementation FlutterKeychainPlugin
+@implementation FlutterKeychainPluginCrypt
 
 - (instancetype)init {
     self = [super init];
@@ -48,7 +48,7 @@ static NSString *const InvalidParameters = @"Invalid parameter's type";
         FlutterMethodChannel* channel = [FlutterMethodChannel
                                          methodChannelWithName:CHANNEL_NAME
                                          binaryMessenger:[registrar messenger]];
-        FlutterKeychainPlugin* instance = [[FlutterKeychainPlugin alloc] init];
+        FlutterKeychainPluginCrypt* instance = [[FlutterKeychainPluginCrypt alloc] init];
         [registrar addMethodCallDelegate:instance channel:channel];
     }
     @catch (NSException *exception) {

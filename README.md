@@ -11,9 +11,6 @@ and the Flutter guide for
 [developing packages and plugins](https://flutter.dev/developing-packages). 
 -->
 
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
-
 ## crypt_local_data
 
 Package that allows us to save data in local storage in an encrypted way.
@@ -30,7 +27,7 @@ SharedPreferences, Encrypt and Flutter Keychain packages were used in the packag
 
 To use the package, we need to add an .env file to the project directory. For AES methodology, two passwords with 32 characters for Key and 16 characters for IV are required.
 
-https://imgur.com/2gfibnq
+https://i.imgur.com/2gfibnq.png
 
 For the 32 character Key password, paste the code below into the terminal and run it.
 
@@ -45,6 +42,7 @@ openssl rand -base64 12
 ```
 
 We place it inside by using the "privateKey" key for the 32-character password, and using the "privateINV" key for the 16-character one as seen in the picture.
+Don't forget to add your .env file under flutter>assets in your pubspec.yaml file
 
 ## Usage
 

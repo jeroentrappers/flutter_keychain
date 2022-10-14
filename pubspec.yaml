@@ -1,7 +1,7 @@
 name: crypt_local_data
 description: Crypted Encrypted Local Data
-version: 0.1.0
-author: Sigma Software
+version: 0.1.1
+author: Sigma Softwares
 homepage: https://github.com/Sigma-Softwares/crypt_local_data
 
 environment:
@@ -25,6 +25,10 @@ dev_dependencies:
 
 # The following section is specific to Flutter.
 flutter:
+  plugin:
+    platforms:
+      ios:
+        pluginClass: FlutterKeychainPluginCrypt
   #assets:
   #  - .env
   #   - images/a_dot_ham.jpeg
