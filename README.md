@@ -27,7 +27,7 @@ SharedPreferences, Encrypt and Flutter Keychain packages were used in the packag
 
 To use the package, we need to add an .env file to the project directory. For AES methodology, two passwords with 32 characters for Key and 16 characters for IV are required.
 
-![pic](https://i.imgur.com/2gfibnq.png)
+![pic](https://i.imgur.com/a1GLEdd.png)
 
 For the 32 character Key password, paste the code below into the terminal and run it.
 
