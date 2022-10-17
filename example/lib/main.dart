@@ -114,7 +114,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 setState(() {
                   dataToBeEncrypted = textController.text;
                 });
-                await CryptLocalData().setCryptedString(dataKey: "newData", dataValue: dataToBeEncrypted ?? "");
+                await CryptLocalData().write(key: "newData", value: dataToBeEncrypted ?? "");
               },),
               const SizedBox(height: 10,),
               //By pressing the button, we bring the encrypted data from the local without decrypting it (in encrypted form).
@@ -126,7 +126,7 @@ class _MyHomePageState extends State<MyHomePage> {
               const SizedBox(height: 10,),
               //When we press the button, we bring the data that we keep encrypted locally by decoding it.
               CupertinoButton(child: const SizedBox(width: 300, height: 20,child: Text("Save With Encryption", textAlign: TextAlign.center, ),), color: Colors.black12, padding: EdgeInsets.zero, onPressed: ()async{
-                decodedData = await CryptLocalData().getEncryptedString(dataKey: "newData");
+                decodedData = await CryptLocalData().read(key: "newData");
                 setState(()  {
                 });
               }),
