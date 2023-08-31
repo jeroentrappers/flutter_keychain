@@ -1,3 +1,7 @@
+## 2.3.0
+
+* Update dependencies, gradle
+
 ## 2.2.1
 
 * Update android deps
