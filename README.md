@@ -23,10 +23,10 @@ var value = await FlutterKeychain.get(key: "key");
 await FlutterKeychain.put(key: "key", value: "value");
 
 // Remove item
-await FlutterKeyChain.remove(key: "key");
+await FlutterKeychain.remove(key: "key");
 
 // Clear the secure store
-await FlutterKeyChain.clear();
+await FlutterKeychain.clear();
 
 ```
 
