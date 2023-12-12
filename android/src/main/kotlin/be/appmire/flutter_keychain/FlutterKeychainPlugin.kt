@@ -117,10 +117,7 @@ class FlutterKeychainPlugin: FlutterPlugin, MethodCallHandler {
 
       result.success(value)
     } catch (exception: Exception) {
-      result.error(
-        "KEYCHAIN_GET_VALUE_ERROR",
-        exception.localizedMessage,
-        exception.stackTrace.toString())
+      result.success(null)
     }
   }
 
