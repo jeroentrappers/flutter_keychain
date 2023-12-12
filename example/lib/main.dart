@@ -48,7 +48,7 @@ class _MyAppState extends State<MyApp> {
                       }
 
                       return IconButton(
-                        icon: const Icon(Icons.clear),
+                        icon: const Icon(Icons.save),
                         onPressed: () async {
                           await FlutterKeychain.put(key: preferencesKey, value: value.text);
                         },
