@@ -11,7 +11,11 @@ import javax.crypto.spec.SecretKeySpec
 
 class AesStringEncryptor
     @Throws(Exception::class)
-    constructor(preferences: SharedPreferences, keyWrapper: KeyWrapper) :
+    constructor(
+        preferences: SharedPreferences,
+        keyWrapper: KeyWrapper,
+        private val wrappedAesKey: String,
+        ) :
     StringEncryptor {
 
     private val charset: Charset = Charset.forName("UTF-8")
@@ -23,11 +27,10 @@ class AesStringEncryptor
         private const val ivSize = 16
         private const val keySize = 16
         private const val KEY_ALGORITHM = "AES"
-        private const val WRAPPED_AES_KEY_ITEM = "W0n5hlJtrAH0K8mIreDGxtG"
     }
 
     init {
-        val wrappedAesKey = preferences.getString(WRAPPED_AES_KEY_ITEM, null)
+        val wrappedAesKey = preferences.getString(wrappedAesKey, null)
 
         secretKey = if (wrappedAesKey == null) {
             createKey(preferences, keyWrapper)
@@ -49,7 +52,7 @@ class AesStringEncryptor
         preferences
             .edit()
             .putString(
-                WRAPPED_AES_KEY_ITEM,
+                wrappedAesKey,
                 Base64.encodeToString(keyWrapper.wrap(secretKey), Base64.DEFAULT)
             )
             .apply()
