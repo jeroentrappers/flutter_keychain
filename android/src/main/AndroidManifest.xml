@@ -1,1 +1,3 @@
-<manifest package="be.appmire.flutterkeychain" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+  package="be.appmire.flutter_keychain">
+</manifest>
