@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'flutter_keychain'
-  s.version          = '0.0.1'
+  s.version          = '2.3.1'
   s.summary          = 'Flutter secure storage via Keychain and Keystore'
   s.description      = <<-DESC
 Flutter secure storage via Keychain and Keystore
