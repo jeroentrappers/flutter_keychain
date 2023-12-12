@@ -1,6 +1,7 @@
 ## 2.3.1
 
 * Raise minimum Flutter version to 3.3.0
+* Add support for specifying the keychain name on Android & iOS.
 
 ## 2.3.0
 
