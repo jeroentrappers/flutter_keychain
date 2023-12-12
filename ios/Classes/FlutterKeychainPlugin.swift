@@ -44,7 +44,7 @@ public class FlutterKeychainPlugin: NSObject, FlutterPlugin {
             result(
                 FlutterError(
                     code: "KEYCHAIN_CLEAR_ERROR",
-                    message: secResult.description,
+                    message: getSecErrorMessage(errorCode: secResult),
                     details: nil)
             )
         }
@@ -119,7 +119,7 @@ public class FlutterKeychainPlugin: NSObject, FlutterPlugin {
             result(
                 FlutterError(
                     code: "KEYCHAIN_PUT_VALUE_ERROR",
-                    message: deleteStatus.description,
+                    message: getSecErrorMessage(errorCode: deleteStatus),
                     details: nil)
             )
             
@@ -132,14 +132,14 @@ public class FlutterKeychainPlugin: NSObject, FlutterPlugin {
         
         let updateStatus = SecItemUpdate(query as CFDictionary,
                                          updateFields as CFDictionary)
-
+        
         if (updateStatus == errSecSuccess) {
             result(nil)
         } else {
             result(
                 FlutterError(
                     code: "KEYCHAIN_PUT_VALUE_ERROR",
-                    message: updateStatus.description,
+                    message: getSecErrorMessage(errorCode: updateStatus),
                     details: nil)
             )
         }
@@ -173,9 +173,17 @@ public class FlutterKeychainPlugin: NSObject, FlutterPlugin {
             result(
                 FlutterError(
                     code: "KEYCHAIN_REMOVE_VALUE_ERROR",
-                    message: secResult.description,
+                    message: getSecErrorMessage(errorCode: secResult),
                     details: nil)
             )
+        }
+    }
+    
+    private func getSecErrorMessage(errorCode: OSStatus) -> String? {
+        if #available(iOS 11.3, *) {
+            return SecCopyErrorMessageString(errorCode, nil) as String?
+        } else {
+            return "Keychain error: \(errorCode)"
         }
     }
 }
