@@ -25,21 +25,24 @@ abstract class FlutterKeychainPlatform extends PlatformInterface {
 
   /// Clears the keychain.
   ///
-  /// The [keyChainName] value can be used on iOS to specify the keychain service name.
+  /// The [keyChainName] value can be used to specify the keychain service name on iOS,
+  /// or the name of the shared preferences file on Android.
   Future<void> clear({String? keyChainName}) {
     throw UnimplementedError('clear() has not been implemented.');
   }
 
   /// Get the value for the given [key].
   ///
-  /// The [keyChainName] value can be used on iOS to specify the keychain service name.
+  /// The [keyChainName] value can be used to specify the keychain service name on iOS,
+  /// or the name of the shared preferences file on Android.
   Future<String?> get({required String key, String? keyChainName}) {
     throw UnimplementedError('get() has not been implemented.');
   }
 
   /// Set the [value] for the given [key].
   ///
-  /// The [keyChainName] value can be used on iOS to specify the keychain service name.
+  /// The [keyChainName] value can be used to specify the keychain service name on iOS,
+  /// or the name of the shared preferences file on Android.
   Future<void> put({
     required String key,
     required String value,
@@ -50,7 +53,8 @@ abstract class FlutterKeychainPlatform extends PlatformInterface {
 
   /// Remove the value for the given [key].
   ///
-  /// The [keyChainName] value can be used on iOS to specify the keychain service name.
+  /// The [keyChainName] value can be used to specify the keychain service name on iOS,
+  /// or the name of the shared preferences file on Android.
   Future<void> remove({required String key, String? keyChainName}) {
     throw UnimplementedError('remove() has not been implemented.');
   }

@@ -4,7 +4,8 @@ import 'flutter_keychain_platform_interface.dart';
 class FlutterKeychain {
   /// Clears the keychain.
   ///
-  /// The [keyChainName] value can be used on iOS to specify the keychain service name.
+  /// The [keyChainName] value can be used to specify the keychain service name on iOS,
+  /// or the name of the shared preferences file on Android.
   static Future<void> clear({String? keyChainName}) {
     return FlutterKeychainPlatform.instance.clear(
       keyChainName: keyChainName,
@@ -13,7 +14,8 @@ class FlutterKeychain {
 
   /// Get the value for the given [key].
   ///
-  /// The [keyChainName] value can be used on iOS to specify the keychain service name.
+  /// The [keyChainName] value can be used to specify the keychain service name on iOS,
+  /// or the name of the shared preferences file on Android.
   static Future<String?> get({required String key, String? keyChainName}) {
     return FlutterKeychainPlatform.instance.get(
       key: key,
@@ -23,7 +25,8 @@ class FlutterKeychain {
 
   /// Set the [value] for the given [key].
   ///
-  /// The [keyChainName] value can be used on iOS to specify the keychain service name.
+  /// The [keyChainName] value can be used to specify the keychain service name on iOS,
+  /// or the name of the shared preferences file on Android.
   static Future<void> put({
     required String key,
     required String value,
@@ -38,7 +41,8 @@ class FlutterKeychain {
 
   /// Remove the value for the given [key].
   ///
-  /// The [keyChainName] value can be used on iOS to specify the keychain service name.
+  /// The [keyChainName] value can be used to specify the keychain service name on iOS,
+  /// or the name of the shared preferences file on Android.
   static Future<void> remove({required String key, String? keyChainName}) {
     return FlutterKeychainPlatform.instance.remove(
       key: key,
