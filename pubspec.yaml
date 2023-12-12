@@ -21,7 +21,7 @@ flutter:
   plugin:
     platforms:
       android:
-        package: be.appmire.flutterkeychain
+        package: be.appmire.flutter_keychain
         pluginClass: FlutterKeychainPlugin
       ios:
         pluginClass: FlutterKeychainPlugin
