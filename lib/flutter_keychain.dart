@@ -1,23 +1,48 @@
-import 'dart:async';
+import 'flutter_keychain_platform_interface.dart';
 
-import 'package:flutter/services.dart';
-
+/// The Flutter Keychain plugin.
 class FlutterKeychain {
-  static const MethodChannel _channel =
-      const MethodChannel('plugin.appmire.be/flutter_keychain');
+  /// Clears the keychain.
+  ///
+  /// The [keyChainName] value can be used on iOS to specify the keychain service name.
+  static Future<void> clear({String? keyChainName}) {
+    return FlutterKeychainPlatform.instance.clear(
+      keyChainName: keyChainName,
+    );
+  }
 
-  // put - store the value for a key
-  static Future<void> put({required String key, required String value}) async =>
-      _channel.invokeMethod('put', {'key': key, 'value': value});
+  /// Get the value for the given [key].
+  ///
+  /// The [keyChainName] value can be used on iOS to specify the keychain service name.
+  static Future<String?> get({required String key, String? keyChainName}) {
+    return FlutterKeychainPlatform.instance.get(
+      key: key,
+      keyChainName: keyChainName,
+    );
+  }
 
-  // get - get the value for a given key
-  static Future<String?> get({required String key}) async =>
-      await _channel.invokeMethod('get', {'key': key});
+  /// Set the [value] for the given [key].
+  ///
+  /// The [keyChainName] value can be used on iOS to specify the keychain service name.
+  static Future<void> put({
+    required String key,
+    required String value,
+    String? keyChainName,
+  }) {
+    return FlutterKeychainPlatform.instance.put(
+      key: key,
+      value: value,
+      keyChainName: keyChainName,
+    );
+  }
 
-  // remove - remove entry for a given key
-  static Future<void> remove({required String key}) async =>
-      await _channel.invokeMethod('remove', {'key': key});
-
-  // clear - clear the keychain
-  static Future<void> clear() async => await _channel.invokeMethod('clear');
+  /// Remove the value for the given [key].
+  ///
+  /// The [keyChainName] value can be used on iOS to specify the keychain service name.
+  static Future<void> remove({required String key, String? keyChainName}) {
+    return FlutterKeychainPlatform.instance.remove(
+      key: key,
+      keyChainName: keyChainName,
+    );
+  }
 }
