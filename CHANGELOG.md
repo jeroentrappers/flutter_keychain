@@ -1,3 +1,7 @@
+## 2.3.1
+
+* Raise minimum Flutter version to 3.3.0
+
 ## 2.3.0
 
 * Update dependencies, gradle
