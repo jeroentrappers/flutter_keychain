@@ -1,62 +1,82 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_keychain/flutter_keychain.dart';
 
-void main() => runApp(new MyApp());
+void main() {
+  runApp(const MyApp());
+}
 
 class MyApp extends StatefulWidget {
+  const MyApp({super.key});
+
   @override
-  _MyAppState createState() => new _MyAppState();
+  State<MyApp> createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
-  String _firstStart = 'Unknown';
+  final TextEditingController controller = TextEditingController();
 
-  @override
-  void initState() {
-    super.initState();
-    initPlatformState();
-  }
-
-  // Platform messages are asynchronous, so we initialize in an async method.
-  Future<void> initPlatformState() async {
-    String platformVersion;
-    // Platform messages may fail, so we use a try/catch PlatformException.
-    try {
-      var firstStart = await FlutterKeychain.get(key: "firstStart");
-
-      if (null == firstStart) {
-        await FlutterKeychain.put(
-            key: "firstStart", value: DateTime.now().toIso8601String());
-      }
-
-      // If the widget was removed from the tree while the asynchronous platform
-      // message was in flight, we want to discard the reply rather than calling
-      // setState to update our non-existent appearance.
-      if (!mounted) return;
-
-      setState(() {
-        if (null == firstStart) {
-          _firstStart = "Was never started before. Restart and see .";
-        } else {
-          _firstStart = firstStart;
-        }
-      });
-    } on Exception catch (ae) {
-      print("Exception: " + ae.toString());
-    }
-  }
+  final String preferencesKey = 'flutter_keychain_example';
 
   @override
   Widget build(BuildContext context) {
-    return new MaterialApp(
-      home: new Scaffold(
-        appBar: new AppBar(
-          title: const Text('Plugin example app'),
+    return MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(
+          title: const Text('Flutter keychain example'),
         ),
-        body: new Center(
-          child: new Text('First Start: $_firstStart\n'),
+        body: Center(
+          child: Column(
+            children: [
+              TextFormField(
+                controller: controller,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter some text';
+                  }
+
+                  return null;
+                },
+                decoration: InputDecoration(
+                  hintText: 'Enter a value',
+                  labelText: 'Keychain input example',
+                  suffix: ValueListenableBuilder(
+                    valueListenable: controller,
+                    builder: (context, value, child) {
+                      if (value.text.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+
+                      return IconButton(
+                        icon: const Icon(Icons.save),
+                        onPressed: () async {
+                          await FlutterKeychain.put(key: preferencesKey, value: value.text);
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ),
+              ElevatedButton(
+                child: const Text('Get value'),
+                onPressed: () async {
+                  final String? value = await FlutterKeychain.get(key: preferencesKey);
+
+                  if (!mounted || value == null || value.isEmpty) {
+                    return;
+                  }
+
+                  controller.text = value;
+                },
+              ),
+              ElevatedButton(
+                child: const Text('Remove value'),
+                onPressed: () async {
+                  await FlutterKeychain.remove(key: preferencesKey);
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

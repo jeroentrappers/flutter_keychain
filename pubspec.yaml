@@ -1,21 +1,27 @@
 name: flutter_keychain
 description: Flutter secure storage via Keychain and Keystore
-version: 2.3.0
+version: 2.3.1
 homepage: https://github.com/jeroentrappers/flutter_keychain
 
 environment:
-  sdk: ">=2.12.0 <4.0.0"
-  flutter: ">=1.10.0"
+  sdk: '>=2.18.0 <4.0.0'
+  flutter: '>=3.3.0'
 
 dependencies:
   flutter:
     sdk: flutter
+  plugin_platform_interface: ^2.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
 
 flutter:
   plugin:
     platforms:
       android:
-        package: be.appmire.flutterkeychain
+        package: be.appmire.flutter_keychain
         pluginClass: FlutterKeychainPlugin
       ios:
         pluginClass: FlutterKeychainPlugin
