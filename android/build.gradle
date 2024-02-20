@@ -25,7 +25,9 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 
 android {
-    namespace 'be.appmire.flutterkeychain'
+    if (project.android.hasProperty("namespace")) {
+        namespace 'be.appmire.flutterkeychain'
+    }
 
     compileSdkVersion 31
 
