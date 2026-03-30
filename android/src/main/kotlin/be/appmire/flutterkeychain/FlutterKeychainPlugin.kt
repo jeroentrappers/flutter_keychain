@@ -13,12 +13,18 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
-import io.flutter.plugin.common.PluginRegistry.Registrar
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.math.BigInteger
 import java.nio.charset.Charset
 import java.security.*
 import java.security.spec.AlgorithmParameterSpec
 import java.util.*
+import javax.crypto.BadPaddingException
 import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
@@ -34,14 +40,12 @@ interface KeyWrapper {
 
 class RsaKeyStoreKeyWrapper(context: Context) : KeyWrapper {
 
-    private val keyAlias: String
-    private val context: Context
+    private val keyAlias: String = context.packageName + ".FlutterKeychain"
+    private val context: Context = context
     private val TYPE_RSA = "RSA"
     private val KEYSTORE_PROVIDER_ANDROID = "AndroidKeyStore"
 
     init {
-        this.keyAlias = context.packageName + ".FlutterKeychain"
-        this.context = context
         createRSAKeysIfNeeded()
     }
 
@@ -58,7 +62,6 @@ class RsaKeyStoreKeyWrapper(context: Context) : KeyWrapper {
         val privateKey = getKeyStore().getKey(keyAlias, null)
         val cipher = getRSACipher()
         cipher.init(Cipher.UNWRAP_MODE, privateKey)
-
         return cipher.unwrap(wrappedKey, algorithm, Cipher.SECRET_KEY)
     }
 
@@ -67,7 +70,6 @@ class RsaKeyStoreKeyWrapper(context: Context) : KeyWrapper {
         val publicKey = getKeyStore().getCertificate(keyAlias).publicKey
         val cipher = getRSACipher()
         cipher.init(Cipher.ENCRYPT_MODE, publicKey)
-
         return cipher.doFinal(input)
     }
 
@@ -76,7 +78,6 @@ class RsaKeyStoreKeyWrapper(context: Context) : KeyWrapper {
         val privateKey = getKeyStore().getKey(keyAlias, null)
         val cipher = getRSACipher()
         cipher.init(Cipher.DECRYPT_MODE, privateKey)
-
         return cipher.doFinal(input)
     }
 
@@ -84,22 +85,15 @@ class RsaKeyStoreKeyWrapper(context: Context) : KeyWrapper {
     private fun getKeyStore(): KeyStore {
         val ks = KeyStore.getInstance(KEYSTORE_PROVIDER_ANDROID)
         ks.load(null)
-
         return ks
     }
 
     @Throws(Exception::class)
     private fun getRSACipher(): Cipher {
         return if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            Cipher.getInstance(
-                "RSA/ECB/PKCS1Padding",
-                "AndroidOpenSSL"
-            ) // error in android 6: InvalidKeyException: Need RSA private or public key
+            Cipher.getInstance("RSA/ECB/PKCS1Padding", "AndroidOpenSSL")
         } else {
-            Cipher.getInstance(
-                "RSA/ECB/PKCS1Padding",
-                "AndroidKeyStoreBCWorkaround"
-            ) // error in android 5: NoSuchProviderException: Provider not available: AndroidKeyStoreBCWorkaround
+            Cipher.getInstance("RSA/ECB/PKCS1Padding", "AndroidKeyStoreBCWorkaround")
         }
     }
 
@@ -108,9 +102,8 @@ class RsaKeyStoreKeyWrapper(context: Context) : KeyWrapper {
         val ks = KeyStore.getInstance(KEYSTORE_PROVIDER_ANDROID)
         ks.load(null)
 
-        // Added hacks for getting KeyEntry:
-        // https://stackoverflow.com/questions/36652675/java-security-unrecoverablekeyexception-failed-to-obtain-information-about-priv
-        // https://stackoverflow.com/questions/36488219/android-security-keystoreexception-invalid-key-blob
+        // Retry loop works around intermittent KeyStore failures on some devices.
+        // See: https://stackoverflow.com/questions/36652675
         var privateKey: PrivateKey? = null
         var publicKey: PublicKey? = null
         for (i in 1..5) {
@@ -145,11 +138,9 @@ class RsaKeyStoreKeyWrapper(context: Context) : KeyWrapper {
 
         val kpGenerator = KeyPairGenerator.getInstance(TYPE_RSA, KEYSTORE_PROVIDER_ANDROID)
 
-        val spec: AlgorithmParameterSpec
-
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-
-            spec = android.security.KeyPairGeneratorSpec.Builder(context)
+        val spec: AlgorithmParameterSpec = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            @Suppress("DEPRECATION")
+            android.security.KeyPairGeneratorSpec.Builder(context)
                 .setAlias(keyAlias)
                 .setSubject(X500Principal("CN=$keyAlias"))
                 .setSerialNumber(BigInteger.valueOf(1))
@@ -157,7 +148,7 @@ class RsaKeyStoreKeyWrapper(context: Context) : KeyWrapper {
                 .setEndDate(end.time)
                 .build()
         } else {
-            spec = KeyGenParameterSpec.Builder(
+            KeyGenParameterSpec.Builder(
                 keyAlias,
                 KeyProperties.PURPOSE_DECRYPT or KeyProperties.PURPOSE_ENCRYPT
             )
@@ -173,20 +164,19 @@ class RsaKeyStoreKeyWrapper(context: Context) : KeyWrapper {
         kpGenerator.initialize(spec)
         kpGenerator.generateKeyPair()
     }
-
 }
 
 interface StringEncryptor {
     @Throws(Exception::class)
     fun encrypt(input: String?): String?
 
-    @Throws(Exception::class)
     fun decrypt(input: String?): String?
 }
 
-class AesStringEncryptor// get the key, which is encrypted by RSA cipher.
-@Throws(Exception::class) constructor(preferences: SharedPreferences, keyWrapper: KeyWrapper) :
-    StringEncryptor {
+class AesStringEncryptor @Throws(Exception::class) constructor(
+    preferences: SharedPreferences,
+    keyWrapper: KeyWrapper
+) : StringEncryptor {
 
     private val ivSize = 16
     private val keySize = 16
@@ -200,15 +190,14 @@ class AesStringEncryptor// get the key, which is encrypted by RSA cipher.
 
     init {
         val wrappedAesKey = preferences.getString(WRAPPED_AES_KEY_ITEM, null)
-
-        if (wrappedAesKey == null) {
-            secretKey = createKey(preferences, keyWrapper)
+        secretKey = if (wrappedAesKey == null) {
+            createKey(preferences, keyWrapper)
         } else {
             val encrypted = Base64.decode(wrappedAesKey, Base64.DEFAULT)
             try {
-                secretKey = keyWrapper.unwrap(encrypted, KEY_ALGORITHM)
-            } catch (ingnored: Exception) {
-                secretKey = createKey(preferences, keyWrapper)
+                keyWrapper.unwrap(encrypted, KEY_ALGORITHM)
+            } catch (ignored: Exception) {
+                createKey(preferences, keyWrapper)
             }
         }
         cipher = Cipher.getInstance("AES/CBC/PKCS7Padding")
@@ -229,23 +218,19 @@ class AesStringEncryptor// get the key, which is encrypted by RSA cipher.
     }
 
     // input: UTF-8 cleartext string
-    // output: Base64 encoded encrypted string
+    // output: Base64 encoded encrypted string (IV prepended)
     @Throws(Exception::class)
     override fun encrypt(input: String?): String? {
-        if (null == input) {
-            return null
-        }
+        if (null == input) return null
 
         val iv = ByteArray(ivSize)
         secureRandom.nextBytes(iv)
-
         val ivParameterSpec = IvParameterSpec(iv)
 
         cipher.init(Cipher.ENCRYPT_MODE, secretKey, ivParameterSpec)
 
         val payload = cipher.doFinal(input.toByteArray(charset))
         val combined = ByteArray(iv.size + payload.size)
-
         System.arraycopy(iv, 0, combined, 0, iv.size)
         System.arraycopy(payload, 0, combined, iv.size, payload.size)
 
@@ -253,113 +238,164 @@ class AesStringEncryptor// get the key, which is encrypted by RSA cipher.
     }
 
     // input: Base64 encoded encrypted string
-    // output: UTF-8 cleartext string
-    @Throws(Exception::class)
+    // output: UTF-8 cleartext string, or null on decryption failure
     override fun decrypt(input: String?): String? {
+        if (null == input) return null
 
-        if (null == input) {
-            return null
+        return try {
+            val inputBytes = Base64.decode(input, 0)
+
+            val iv = ByteArray(ivSize)
+            System.arraycopy(inputBytes, 0, iv, 0, iv.size)
+            val ivParameterSpec = IvParameterSpec(iv)
+
+            val payloadSize = inputBytes.size - ivSize
+            val payload = ByteArray(payloadSize)
+            System.arraycopy(inputBytes, iv.size, payload, 0, payloadSize)
+
+            cipher.init(Cipher.DECRYPT_MODE, secretKey, ivParameterSpec)
+            val outputBytes = cipher.doFinal(payload)
+            String(outputBytes, charset)
+        } catch (e: BadPaddingException) {
+            Log.w(TAG, "Decryption failed — key may be out of sync with stored data. Returning null.", e)
+            null
+        } catch (e: InvalidKeyException) {
+            Log.w(TAG, "Decryption failed — invalid key. Returning null.", e)
+            null
+        } catch (e: Exception) {
+            Log.w(TAG, "Decryption failed: ${e.message}. Returning null.", e)
+            null
         }
+    }
 
-        val inputBytes = Base64.decode(input, 0)
-
-        val iv = ByteArray(ivSize)
-        System.arraycopy(inputBytes, 0, iv, 0, iv.size)
-        val ivParameterSpec = IvParameterSpec(iv)
-
-        val payloadSize = inputBytes.size - ivSize
-        val payload = ByteArray(payloadSize)
-        System.arraycopy(inputBytes, iv.size, payload, 0, payloadSize)
-
-        cipher.init(Cipher.DECRYPT_MODE, secretKey, ivParameterSpec)
-        val outputBytes = cipher.doFinal(payload)
-        return String(outputBytes, charset)
+    private companion object {
+        const val TAG = "flutter_keychain"
     }
 }
 
 class FlutterKeychainPlugin : FlutterPlugin, MethodCallHandler {
+
     private var channel: MethodChannel? = null
-    private val WRAPPED_AES_KEY_ITEM = "W0n5hlJtrAH0K8mIreDGxtG"
+
+    // Coroutine scope tied to the lifecycle of this plugin instance.
+    // SupervisorJob means one failed child doesn't cancel the rest.
+    private val pluginScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    // Becomes non-null after background init completes.
+    // Only read/written on the Main dispatcher.
+    private var encryptor: StringEncryptor? = null
+
+    // Calls that arrive before the encryptor is ready are queued here and
+    // replayed once init finishes. Accessed on Main only.
+    private val pendingCalls = ArrayDeque<Pair<MethodCall, Result>>()
+
+    private var preferences: SharedPreferences? = null
 
     companion object {
-        private const val channelName = "plugin.appmire.be/flutter_keychain"
-
-        lateinit private var encryptor: StringEncryptor
-        lateinit private var preferences: SharedPreferences
-
-        @JvmStatic
-        fun registerWith(registrar: Registrar) {
-
-            try {
-                preferences = registrar.context()
-                    .getSharedPreferences("FlutterKeychain", Context.MODE_PRIVATE)
-                encryptor = AesStringEncryptor(
-                    preferences = preferences,
-                    keyWrapper = RsaKeyStoreKeyWrapper(registrar.context())
-                )
-
-                val instance = FlutterKeychainPlugin()
-                instance.channel = MethodChannel(registrar.messenger(), channelName)
-                instance.channel?.setMethodCallHandler(FlutterKeychainPlugin())
-            } catch (e: Exception) {
-                Log.e("flutter_keychain", "Could not register plugin", e)
-            }
-        }
+        private const val TAG = "flutter_keychain"
+        private const val CHANNEL_NAME = "plugin.appmire.be/flutter_keychain"
+        private const val WRAPPED_AES_KEY_ITEM = "W0n5hlJtrAH0K8mIreDGxtG"
     }
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-        preferences =
-            binding.applicationContext.getSharedPreferences("FlutterKeychain", Context.MODE_PRIVATE)
-        encryptor = AesStringEncryptor(
-            preferences = preferences,
-            keyWrapper = RsaKeyStoreKeyWrapper(binding.applicationContext)
-        )
+        val context = binding.applicationContext
+        preferences = context.getSharedPreferences("FlutterKeychain", Context.MODE_PRIVATE)
 
-        channel = MethodChannel(binding.binaryMessenger, channelName)
+        channel = MethodChannel(binding.binaryMessenger, CHANNEL_NAME)
         channel!!.setMethodCallHandler(this)
+
+        // Initialise crypto on IO — never block the main thread.
+        pluginScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    AesStringEncryptor(
+                        preferences = preferences!!,
+                        keyWrapper = RsaKeyStoreKeyWrapper(context)
+                    ) as StringEncryptor
+                }.getOrElse { e ->
+                    Log.e(TAG, "Failed to initialise crypto engine", e)
+                    null
+                }
+            }
+
+            // Back on Main — safe to mutate state and flush queued calls.
+            encryptor = result
+            val pending = pendingCalls.toList()
+            pendingCalls.clear()
+            for ((call, res) in pending) {
+                dispatchCall(call, res)
+            }
+        }
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel?.setMethodCallHandler(null)
         channel = null
+        pluginScope.cancel()
+        encryptor = null
+        pendingCalls.clear()
     }
 
-    fun MethodCall.key(): String? {
-        return this.argument("key")
+    override fun onMethodCall(call: MethodCall, result: Result) {
+        if (encryptor == null) {
+            // Crypto engine not ready yet — queue until init completes.
+            pendingCalls.addLast(call to result)
+            return
+        }
+        dispatchCall(call, result)
     }
 
-    fun MethodCall.value(): String? {
-        return this.argument("value")
-    }
+    private fun dispatchCall(call: MethodCall, result: Result) {
+        val enc = encryptor
+        if (enc == null) {
+            result.error(TAG, "Crypto engine not available", null)
+            return
+        }
+        val prefs = preferences!!
 
-    override fun onMethodCall(call: MethodCall, result: Result): Unit {
-        try {
-            when (call.method) {
-                "get" -> {
-                    val encryptedValue: String? = preferences.getString(call.key(), null)
-                    val value = encryptor.decrypt(encryptedValue)
-                    result.success(value)
+        pluginScope.launch {
+            try {
+                when (call.method) {
+                    "get" -> {
+                        val key = call.argument<String>("key")
+                        val value = withContext(Dispatchers.IO) {
+                            enc.decrypt(prefs.getString(key, null))
+                        }
+                        result.success(value)
+                    }
+                    "put" -> {
+                        val key = call.argument<String>("key")
+                        val value = call.argument<String>("value")
+                        withContext(Dispatchers.IO) {
+                            prefs.edit().putString(key, enc.encrypt(value)).commit()
+                        }
+                        result.success(null)
+                    }
+                    "remove" -> {
+                        val key = call.argument<String>("key")
+                        withContext(Dispatchers.IO) {
+                            prefs.edit().remove(key).commit()
+                        }
+                        result.success(null)
+                    }
+                    "clear" -> {
+                        withContext(Dispatchers.IO) {
+                            val savedKey = prefs.getString(WRAPPED_AES_KEY_ITEM, null)
+                            prefs.edit().clear().commit()
+                            prefs.edit().putString(WRAPPED_AES_KEY_ITEM, savedKey).commit()
+                        }
+                        result.success(null)
+                    }
+                    "configure" -> {
+                        // Access groups and labels are iOS-only; no-op on Android.
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
                 }
-                "put" -> {
-                    val value = encryptor.encrypt(call.value())
-                    preferences.edit().putString(call.key(), value).commit()
-                    result.success(null)
-                }
-                "remove" -> {
-                    preferences.edit().remove(call.key()).commit()
-                    result.success(null)
-                }
-                "clear" -> {
-                    val savedValue: String? = preferences.getString(WRAPPED_AES_KEY_ITEM, null)
-                    preferences.edit().clear().commit()
-                    preferences.edit().putString(WRAPPED_AES_KEY_ITEM, savedValue).commit()
-                    result.success(null)
-                }
-                else -> result.notImplemented()
+            } catch (e: Exception) {
+                Log.e(TAG, e.message ?: e.toString())
+                result.error(TAG, e.message, e)
             }
-        } catch (e: Exception) {
-            Log.e("flutter_keychain", e.message ?: e.toString())
-            result.error("flutter_keychain", e.message, e)
         }
     }
 }
