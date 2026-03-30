@@ -1,3 +1,7 @@
+## 3.0.1
+
+* Update public API documentation comments for pub.dev scoring.
+
 ## 3.0.0
 
 **Breaking changes**

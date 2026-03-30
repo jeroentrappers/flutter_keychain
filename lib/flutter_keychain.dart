@@ -1,22 +1,33 @@
+/// Flutter API for storing secrets in the iOS Keychain and Android Keystore.
+library flutter_keychain;
+
 import 'dart:async';
 
 import 'package:flutter/services.dart';
 
+/// Provides static helpers for storing and retrieving secure key-value pairs.
 class FlutterKeychain {
   static const MethodChannel _channel =
       MethodChannel('plugin.appmire.be/flutter_keychain');
 
-  // configure - optional iOS-specific settings. No-op on Android.
-  //
-  // [accessGroup] sets kSecAttrAccessGroup, enabling shared keychain access
-  // between apps in the same App Group (e.g. "group.com.example.shared").
-  // Pass null to use the default app-specific access group.
-  //
-  // [label] sets kSecAttrLabel, which controls how the item appears in the
-  // iOS Passwords app (Settings > Passwords). Pass null to omit the label.
-  //
-  // Must be called before the first get/put/remove/clear if non-default
-  // values are desired.
+  /// Creates a [FlutterKeychain] instance.
+  ///
+  /// The plugin API is exposed through static methods, so creating an
+  /// instance is usually unnecessary.
+  FlutterKeychain();
+
+  /// Configures optional iOS-specific keychain settings.
+  ///
+  /// This is a no-op on Android.
+  ///
+  /// [accessGroup] sets `kSecAttrAccessGroup`, enabling shared keychain access
+  /// between apps in the same App Group.
+  ///
+  /// [label] sets `kSecAttrLabel`, which controls how the item appears in the
+  /// iOS Passwords app.
+  ///
+  /// Call this before the first [get], [put], [remove], or [clear] when
+  /// non-default values are required.
   static Future<void> configure({
     String? accessGroup,
     String? label,
@@ -26,19 +37,23 @@ class FlutterKeychain {
         'label': label,
       });
 
-  // put - store the value for a key
+  /// Stores [value] for [key].
   static Future<void> put({required String key, required String value}) async =>
       _channel.invokeMethod('put', {'key': key, 'value': value});
 
-  // get - get the value for a given key; returns null when the key is absent
-  // or when the stored value can no longer be decrypted (Android).
+  /// Returns the stored value for [key].
+  ///
+  /// Returns `null` when the key is absent or when the stored value can no
+  /// longer be decrypted on Android.
   static Future<String?> get({required String key}) async =>
       await _channel.invokeMethod('get', {'key': key});
 
-  // remove - remove entry for a given key
+  /// Removes the stored value for [key].
   static Future<void> remove({required String key}) async =>
       await _channel.invokeMethod('remove', {'key': key});
 
-  // clear - clear all keychain entries (preserves the Android AES key)
+  /// Removes all stored entries.
+  ///
+  /// On Android, this preserves the AES key used to encrypt stored values.
   static Future<void> clear() async => await _channel.invokeMethod('clear');
 }
