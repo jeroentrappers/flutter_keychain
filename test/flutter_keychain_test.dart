@@ -272,10 +272,17 @@ void main() {
       });
 
       await FlutterKeychain.configure(
-          accessGroup: 'group.com.example', label: 'My App');
+        accessGroup: 'group.com.example',
+        label: 'My App',
+        accessible: FlutterKeychainAccessible.afterFirstUnlock,
+        accessibilityMigration:
+            FlutterKeychainAccessibilityMigration.automatic,
+      );
       expect(captured?.method, 'configure');
       expect(captured?.arguments['accessGroup'], 'group.com.example');
       expect(captured?.arguments['label'], 'My App');
+      expect(captured?.arguments['accessible'], 'afterFirstUnlock');
+      expect(captured?.arguments['accessibilityMigration'], 'automatic');
     });
 
     test('sends null values when called without arguments', () async {
@@ -290,6 +297,8 @@ void main() {
       expect(captured?.method, 'configure');
       expect(captured?.arguments['accessGroup'], isNull);
       expect(captured?.arguments['label'], isNull);
+      expect(captured?.arguments['accessible'], isNull);
+      expect(captured?.arguments['accessibilityMigration'], 'none');
     });
 
     test('completes without throwing', () async {
@@ -320,6 +329,55 @@ void main() {
       await FlutterKeychain.configure(label: 'My Credentials');
       expect(captured?.arguments['accessGroup'], isNull);
       expect(captured?.arguments['label'], 'My Credentials');
+      expect(captured?.arguments['accessible'], isNull);
+    });
+
+    test('configure with only accessible sends stable string token', () async {
+      MethodCall? captured;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+        captured = call;
+        return null;
+      });
+
+      await FlutterKeychain.configure(
+        accessible: FlutterKeychainAccessible.whenUnlockedThisDeviceOnly,
+      );
+      expect(captured?.arguments['accessGroup'], isNull);
+      expect(captured?.arguments['label'], isNull);
+      expect(
+        captured?.arguments['accessible'],
+        'whenUnlockedThisDeviceOnly',
+      );
+    });
+
+    test('each FlutterKeychainAccessible value maps to a unique token', () {
+      final values =
+          FlutterKeychainAccessible.values.map((e) => e.value).toList();
+      expect(values.toSet().length, values.length);
+    });
+
+    test('configure with automatic migration sends migration token', () async {
+      MethodCall? captured;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+        captured = call;
+        return null;
+      });
+
+      await FlutterKeychain.configure(
+        accessible: FlutterKeychainAccessible.afterFirstUnlock,
+        accessibilityMigration:
+            FlutterKeychainAccessibilityMigration.automatic,
+      );
+      expect(captured?.arguments['accessibilityMigration'], 'automatic');
+    });
+
+    test('each FlutterKeychainAccessibilityMigration value is unique', () {
+      final values = FlutterKeychainAccessibilityMigration.values
+          .map((e) => e.value)
+          .toList();
+      expect(values.toSet().length, values.length);
     });
   });
 

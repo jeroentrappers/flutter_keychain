@@ -328,6 +328,105 @@
     [self invokeMethod:@"configure" arguments:@{}];
 }
 
+- (void)testConfigure_withAccessible_itemsStillRetrievable {
+    [self invokeMethod:@"configure"
+             arguments:@{@"accessible": @"afterFirstUnlock"}];
+    [self invokeMethod:@"put" arguments:@{@"key": @"ak", @"value": @"av"}];
+    XCTAssertEqualObjects([self invokeMethod:@"get" arguments:@{@"key": @"ak"}], @"av");
+    [self invokeMethod:@"configure" arguments:@{}];
+}
+
+- (void)testConfigure_withUnknownAccessible_returnsFlutterError {
+    __block id returnValue = nil;
+    FlutterMethodCall *call =
+        [FlutterMethodCall methodCallWithMethodName:@"configure"
+                                           arguments:@{@"accessible": @"invalid"}];
+    [self.plugin handleMethodCall:call result:^(id result) {
+        returnValue = result;
+    }];
+    XCTAssertTrue([returnValue isKindOfClass:[FlutterError class]]);
+    FlutterError *error = (FlutterError *)returnValue;
+    XCTAssertEqualObjects(error.code, @"INVALID_ACCESSIBLE");
+}
+
+- (void)testConfigure_withUnknownMigration_returnsFlutterError {
+    __block id returnValue = nil;
+    FlutterMethodCall *call =
+        [FlutterMethodCall methodCallWithMethodName:@"configure"
+                                           arguments:@{@"accessibilityMigration": @"invalid"}];
+    [self.plugin handleMethodCall:call result:^(id result) {
+        returnValue = result;
+    }];
+    XCTAssertTrue([returnValue isKindOfClass:[FlutterError class]]);
+    FlutterError *error = (FlutterError *)returnValue;
+    XCTAssertEqualObjects(error.code, @"INVALID_ACCESSIBILITY_MIGRATION");
+}
+
+- (CFStringRef)accessibleAttributeForKey:(NSString *)key {
+    NSMutableDictionary *search = [NSMutableDictionary dictionary];
+    search[(__bridge id)kSecClass]       = (__bridge id)kSecClassGenericPassword;
+    search[(__bridge id)kSecAttrService] = @"flutter_keychain";
+    search[(__bridge id)kSecAttrAccount] = key;
+    search[(__bridge id)kSecReturnAttributes] = (__bridge id)kCFBooleanTrue;
+    search[(__bridge id)kSecMatchLimit]  = (__bridge id)kSecMatchLimitOne;
+
+    CFDictionaryRef attrs = NULL;
+    OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)search,
+                                          (CFTypeRef *)&attrs);
+    if (status == noErr && attrs != NULL) {
+        NSDictionary *dict = (__bridge_transfer NSDictionary *)attrs;
+        return (__bridge CFStringRef)dict[(__bridge id)kSecAttrAccessible];
+    }
+    return NULL;
+}
+
+- (void)testLegacyItem_readableAfterAccessibleReconfigure {
+    // Legacy item: default configure (system whenUnlocked on add).
+    [self invokeMethod:@"put" arguments:@{@"key": @"legacy", @"value": @"old"}];
+
+    // Reconfigure to afterFirstUnlock without migration — must still read.
+    [self invokeMethod:@"configure"
+             arguments:@{@"accessible": @"afterFirstUnlock",
+                         @"accessibilityMigration": @"none"}];
+    XCTAssertEqualObjects(
+        [self invokeMethod:@"get" arguments:@{@"key": @"legacy"}], @"old");
+
+    [self invokeMethod:@"configure" arguments:@{}];
+}
+
+- (void)testLegacyItem_automaticMigrationUpdatesAccessible {
+    [self invokeMethod:@"put" arguments:@{@"key": @"migrate", @"value": @"data"}];
+
+    CFStringRef before = [self accessibleAttributeForKey:@"migrate"];
+    XCTAssertEqual(before, kSecAttrAccessibleWhenUnlocked);
+
+    [self invokeMethod:@"configure"
+             arguments:@{@"accessible": @"afterFirstUnlock",
+                         @"accessibilityMigration": @"automatic"}];
+    XCTAssertEqualObjects(
+        [self invokeMethod:@"get" arguments:@{@"key": @"migrate"}], @"data");
+
+    CFStringRef after = [self accessibleAttributeForKey:@"migrate"];
+    XCTAssertEqual(after, kSecAttrAccessibleAfterFirstUnlock);
+
+    [self invokeMethod:@"configure" arguments:@{}];
+}
+
+- (void)testLegacyItem_noneMigrationLeavesAccessibleUnchanged {
+    [self invokeMethod:@"put" arguments:@{@"key": @"nomigrate", @"value": @"stay"}];
+
+    [self invokeMethod:@"configure"
+             arguments:@{@"accessible": @"afterFirstUnlock",
+                         @"accessibilityMigration": @"none"}];
+    XCTAssertEqualObjects(
+        [self invokeMethod:@"get" arguments:@{@"key": @"nomigrate"}], @"stay");
+
+    CFStringRef accessible = [self accessibleAttributeForKey:@"nomigrate"];
+    XCTAssertEqual(accessible, kSecAttrAccessibleWhenUnlocked);
+
+    [self invokeMethod:@"configure" arguments:@{}];
+}
+
 // ---------------------------------------------------------------------------
 // Method channel – unimplemented method
 // ---------------------------------------------------------------------------

@@ -5,6 +5,51 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 
+/// iOS Keychain accessibility (`kSecAttrAccessible`) for stored items.
+///
+/// Has no effect on Android.
+enum FlutterKeychainAccessible {
+  /// `kSecAttrAccessibleWhenUnlocked`
+  whenUnlocked('whenUnlocked'),
+
+  /// `kSecAttrAccessibleAfterFirstUnlock`
+  afterFirstUnlock('afterFirstUnlock'),
+
+  /// `kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly`
+  whenPasscodeSetThisDeviceOnly('whenPasscodeSetThisDeviceOnly'),
+
+  /// `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`
+  whenUnlockedThisDeviceOnly('whenUnlockedThisDeviceOnly'),
+
+  /// `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`
+  afterFirstUnlockThisDeviceOnly('afterFirstUnlockThisDeviceOnly');
+
+  const FlutterKeychainAccessible(this.value);
+
+  /// Stable string sent over the method channel to iOS.
+  final String value;
+}
+
+/// How iOS should handle existing Keychain items whose `kSecAttrAccessible`
+/// differs from the value passed to [FlutterKeychain.configure].
+///
+/// Has no effect on Android.
+enum FlutterKeychainAccessibilityMigration {
+  /// Do not change existing items. Reads remain compatible with older entries;
+  /// only newly added items use the configured [FlutterKeychainAccessible].
+  none('none'),
+
+  /// After a successful read or update, attempt to migrate the item to the
+  /// configured [FlutterKeychainAccessible]. Migration failures are logged and
+  /// do not affect the operation result.
+  automatic('automatic');
+
+  const FlutterKeychainAccessibilityMigration(this.value);
+
+  /// Stable string sent over the method channel to iOS.
+  final String value;
+}
+
 /// Provides static helpers for storing and retrieving secure key-value pairs.
 class FlutterKeychain {
   static const MethodChannel _channel =
@@ -26,15 +71,29 @@ class FlutterKeychain {
   /// [label] sets `kSecAttrLabel`, which controls how the item appears in the
   /// iOS Passwords app.
   ///
+  /// [accessible] sets `kSecAttrAccessible` for **new** items and for migration
+  /// when [accessibilityMigration] is [FlutterKeychainAccessibilityMigration.automatic].
+  /// Reads and deletes do not filter by this attribute, so older entries remain
+  /// readable after you change the configured value.
+  ///
+  /// [accessibilityMigration] controls whether existing items are lazily migrated
+  /// to [accessible] after a successful read or update. Defaults to
+  /// [FlutterKeychainAccessibilityMigration.none].
+  ///
   /// Call this before the first [get], [put], [remove], or [clear] when
   /// non-default values are required.
   static Future<void> configure({
     String? accessGroup,
     String? label,
+    FlutterKeychainAccessible? accessible,
+    FlutterKeychainAccessibilityMigration accessibilityMigration =
+        FlutterKeychainAccessibilityMigration.none,
   }) async =>
       _channel.invokeMethod('configure', {
         'accessGroup': accessGroup,
         'label': label,
+        'accessible': accessible?.value,
+        'accessibilityMigration': accessibilityMigration.value,
       });
 
   /// Stores [value] for [key].

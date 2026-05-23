@@ -30,6 +30,40 @@ await FlutterKeychain.clear();
 
 ```
 
+### iOS configuration (optional)
+
+Call `configure` before the first read/write when you need non-default Keychain behaviour.
+`accessGroup`, `label`, `accessible`, and `accessibilityMigration` are iOS-only.
+
+```dart
+await FlutterKeychain.configure(
+  accessGroup: 'group.com.example.shared',
+  label: 'My App Credentials',
+  accessible: FlutterKeychainAccessible.afterFirstUnlock,
+  // Default: do not change existing items (reads stay compatible).
+  accessibilityMigration: FlutterKeychainAccessibilityMigration.none,
+);
+```
+
+`accessible` is applied when **adding** new Keychain items. Reads and deletes do not filter by
+`accessible`, so data written before you changed the setting remains readable.
+
+To upgrade older items (for example from the system default `whenUnlocked` to
+`afterFirstUnlock`), opt in to lazy migration:
+
+```dart
+await FlutterKeychain.configure(
+  accessible: FlutterKeychainAccessible.afterFirstUnlock,
+  accessibilityMigration: FlutterKeychainAccessibilityMigration.automatic,
+);
+```
+
+With `automatic`, a successful `get` or `put` update attempts to migrate that item's
+`kSecAttrAccessible`. Migration failures are logged and do not affect the returned value.
+
+On Android, `configure` is a no-op. Android does not expose a per-item equivalent of
+`kSecAttrAccessible`; stored values use the plugin's existing Keystore-backed encryption.
+
 ### Configure Android version
 In `[project]/android/app/build.gradle` set `minSdkVersion` to >= 18.
 ```

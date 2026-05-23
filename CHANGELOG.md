@@ -1,3 +1,15 @@
+## 3.1.0
+
+**New features**
+* Dart: `FlutterKeychain.configure` accepts optional `accessible` via the
+  `FlutterKeychainAccessible` enum.
+* Dart: `accessibilityMigration` (`none` or `automatic`) controls lazy migration of
+  existing iOS Keychain items to the configured `accessible` value.
+* iOS: `accessible` applies on `SecItemAdd` and optional migration updates; reads,
+  deletes, and existence checks use an identity query without `kSecAttrAccessible` so
+  legacy items remain readable.
+* Android: `configure` remains a no-op for iOS-only settings (no 1:1 Keychain equivalent).
+
 ## 3.0.1
 
 * Update public API documentation comments for pub.dev scoring.
